@@ -271,8 +271,8 @@ def random_bbox_crop(image, mask, area_range=(0.05, 1.0), aspect_ratio_range=(0.
     image.set_shape([None, None, 3])
     mask.set_shape([None, None, None])
     image = tf.clip_by_value(image, 0, 255)
-    image = tf.cast(image, dtype=tf.uint8)
-    mask = tf.cast(mask, dtype=tf.uint8)
+    #image = tf.cast(image, dtype=tf.uint8)
+    #mask = tf.cast(mask, dtype=tf.uint8)
     return image, mask
 
 
@@ -281,8 +281,8 @@ def random_resized_crop(image, mask, size=[256, 256], area_range=(0.05, 1.0), as
         image, mask = random_bbox_crop(image, mask, area_range=area_range, aspect_ratio_range=aspect_ratio_range)
         image = tf.image.resize(image, size=size)
         mask = tf.image.resize(mask, size=size)
-        image = tf.cast(image, tf.uint8)
-        mask = tf.cast(mask, dtype=tf.uint8)
+        #image = tf.cast(image, tf.uint8)
+        #mask = tf.cast(mask, dtype=tf.uint8)
         return image, mask
 
     # return apply_func_with_prob(_random_resized_crop, image, (size, area_range, aspect_ratio_range), prob)
@@ -290,7 +290,8 @@ def random_resized_crop(image, mask, size=[256, 256], area_range=(0.05, 1.0), as
     return tf.cond(
         tf.random.uniform([], 0, 1) < prob,
         lambda: _random_resized_crop(image, mask, size, area_range=area_range, aspect_ratio_range=aspect_ratio_range),
-        lambda: (tf.cast(tf.image.resize(image, size=size), tf.uint8), tf.cast(tf.image.resize(mask, size=size), tf.uint8)),
+        # lambda: (tf.cast(tf.image.resize(image, size=size), tf.uint8), tf.cast(tf.image.resize(mask, size=size), tf.uint8)),
+        lambda: tf.image.resize(image, size=size), tf.image.resize(mask, size=size)
     )
 
 def random_cutout(image, mask, num_holes=8, hole_size=20, replace=0, prob=0.5):
@@ -403,7 +404,7 @@ def random_jpeg_quality(image, mask, jpeg_quality_range=(75, 95), prob=0.5):
     return apply_func_with_prob(F.adjust_jpeg_quality, image, (jpeg_quality, ), prob), mask
 
 
-def random_elastic_deform(image, mask, scale=10, strength=10, mask_max=255, prob=0.5):
+def random_elastic_deform(image, mask, scale=10, strength=10, mask_max=, prob=0.5):
     def elastic_deform(image, mask, scale, strength, mask_max):
         size = tf.cast(tf.shape(image), tf.int32)
         flow = tf.random.uniform([tf.math.floordiv(size[0], scale),
@@ -415,9 +416,9 @@ def random_elastic_deform(image, mask, scale=10, strength=10, mask_max=255, prob
         image = tfa.image.dense_image_warp(tf.expand_dims(tf.cast(image, tf.float32), axis=0), tf.expand_dims(flow, axis=0))[0]
         mask = tfa.image.dense_image_warp(tf.expand_dims(tf.cast(mask, tf.float32), axis=0), tf.expand_dims(flow, axis=0))[0]
         image = tf.clip_by_value(image, 0, 255)
-        image = tf.cast(image, tf.uint8)
+        #image = tf.cast(image, tf.uint8)
         mask = tf.where(mask>mask_max//2,mask_max,0)
-        mask = tf.cast(mask, tf.uint8)
+        #mask = tf.cast(mask, tf.uint8)
         return image, mask
     return tf.cond(
         tf.random.uniform([], 0, 1) < prob,
@@ -438,9 +439,9 @@ def random_sparse_warp(image, mask, dst_x=0.3, dst_y=0.3, mask_max=255, prob=0.5
                                             dest_control_point_locations=dst_points)
         mask = tfa.image.dense_image_warp(tf.expand_dims(tf.cast(mask, tf.float32), axis=0), flow)[0]
         image = tf.clip_by_value(image, 0, 255)
-        image = tf.cast(image, tf.uint8)
+        #image = tf.cast(image, tf.uint8)
         mask = tf.where(mask>mask_max//2,mask_max,0)
-        mask = tf.cast(mask, tf.uint8)
+        #mask = tf.cast(mask, tf.uint8)
         return image, mask
     return tf.cond(
         tf.random.uniform([], 0, 1) < prob,
@@ -454,7 +455,7 @@ def random_gaussian_noise(image, mask, stddev_range=[5, 95], prob=0.5):
         stddev = tf.random.uniform([], minval=stddev_range[0], maxval=stddev_range[1], dtype=tf.float32)
         image = tf.random.normal(tf.shape(image), stddev=stddev) + image
         image = tf.clip_by_value(image, 0, 255)
-        image = tf.cast(image, tf.uint8)
+        #image = tf.cast(image, tf.uint8)
         return image
     return tf.cond(
         tf.random.uniform([], 0, 1) < prob,
@@ -470,7 +471,7 @@ def random_speckle_noise(image, mask, prob_range=[0.0, 0.05], prob=0.5):
         image = tf.where(sample <= prob, tf.cast(tf.zeros_like(image), tf.float32), image)
         image = tf.where(sample >= (1. - prob), 255.*tf.cast(tf.ones_like(image), tf.float32), image)
         image = tf.clip_by_value(image, 0, 255)
-        image = tf.cast(image, tf.uint8)
+        #image = tf.cast(image, tf.uint8)
         return image
     return tf.cond(
         tf.random.uniform([], 0, 1) < prob,
@@ -490,5 +491,6 @@ def random_crop(image, mask, size=(256,256), prob=0.5):
     return tf.cond(
         tf.random.uniform([], 0, 1) < prob,
         lambda: _random_crop(image, mask, size),
-        lambda: (tf.cast(tf.image.resize(image, size=size), tf.uint8), tf.cast(tf.image.resize(mask, size=size), tf.uint8)),
+        # lambda: (tf.cast(tf.image.resize(image, size=size), tf.uint8), tf.cast(tf.image.resize(mask, size=size), tf.uint8)),
+        lambda: image, mask
     )
